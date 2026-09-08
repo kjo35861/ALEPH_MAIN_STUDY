@@ -34,7 +34,7 @@
 ![n8n 워크플로우](images/n8n워크플로우.png)
 
 **Code 노드 판정 결과 (아이템 2개, decision/severity/reason 확인)**
-![Code 노드 출력](images/code_node_output.png)
+![Code 노드 출력](images/코드노드출력.png)
 
 **메신저 알림 도착 화면**
 ![슬랙 알림](images/슬랙알림.png)
