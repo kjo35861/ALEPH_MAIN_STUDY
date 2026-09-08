@@ -13,7 +13,7 @@ import urllib.request
 import urllib.error
 
 # ── 설정값 (상수로 모아둠) ────────────────────────────────
-N8N_WEBHOOK_URL = "http://localhost:5678/webhook/271b2f33-1edc-4ce1-a2d3-577ce8def7cb"  # 본인 n8n Webhook 주소로 변경
+N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL")  # 본인 n8n Webhook 주소로 변경
 STUDENT_NAME = "김준오"  # 본인 식별자 (채점 증적)
 TIMEOUT_SEC = 5
 
