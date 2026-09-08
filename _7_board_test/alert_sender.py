@@ -11,6 +11,8 @@ security_events 테이블 컬럼과 매칭되는 필드를 함께 보낸다:
 import json
 import urllib.request
 import urllib.error
+import os
+from dotenv import load_dotenv
 
 # ── 설정값 (상수로 모아둠) ────────────────────────────────
 N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL")  # 본인 n8n Webhook 주소로 변경
