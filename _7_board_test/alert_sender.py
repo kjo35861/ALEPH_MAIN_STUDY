@@ -14,6 +14,8 @@ import urllib.error
 import os
 from dotenv import load_dotenv
 
+load_dotenv()
+
 # ── 설정값 (상수로 모아둠) ────────────────────────────────
 N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL")  # 본인 n8n Webhook 주소로 변경
 STUDENT_NAME = "김준오"  # 본인 식별자 (채점 증적)
