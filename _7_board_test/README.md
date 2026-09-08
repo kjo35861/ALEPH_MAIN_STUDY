@@ -31,24 +31,24 @@
 > 아래 이미지는 `images/` 폴더에 넣고 파일명을 맞춰주세요.
 
 **n8n 워크플로우 전체 화면**
-![n8n 워크플로우](images/n8n_workflow.png)
+![n8n 워크플로우](images/n8n워크플로우.png)
 
 **Code 노드 판정 결과 (아이템 2개, decision/severity/reason 확인)**
 ![Code 노드 출력](images/code_node_output.png)
 
 **메신저 알림 도착 화면**
-![슬랙 알림](images/slack_alert.png)
-![디스코드 알림](images/discord_alert.png)
-![텔레그램 알림](images/telegram_alert.png)
+![슬랙 알림](images/슬랙알림.png)
+![디스코드 알림](images/디스코드알림.png)
+![텔레그램 알림](images/텔레그램알림.png)
 
 **게시판 REST API 테스트 결과 (401 / 400 / 201)**
-![API 테스트](images/api_test.png)
+![API 테스트](images/RESTAPI테스트결과.png)
 
 **MySQL 저장 결과**
-![DB 저장 결과](images/mysql_result.png)
+![DB 저장 결과](images/DB저장결과.png)
 
 **n8n Executions — 게시판 저장 노드 성공(201)**
-![n8n Execution 결과](images/n8n_execution.png)
+![n8n Execution 결과](images/게시판저장성공.png)
 
 ## ④ 실행 방법
 
