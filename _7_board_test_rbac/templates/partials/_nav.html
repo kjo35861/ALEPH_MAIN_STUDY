@@ -1,0 +1,131 @@
+{# 공통 헤더 — 데스크톱은 가로 메뉴, 모바일(md 미만)은 햄버거 메뉴 #}
+<header class="bg-white shadow-sm sticky top-0 z-20">
+  <div class="max-w-5xl mx-auto px-4">
+    <div class="flex justify-between items-center h-16">
+
+      <!-- 로고 -->
+      <a href="/" class="text-xl font-bold text-indigo-600 shrink-0">✨ 모던 게시판</a>
+
+      <!-- 데스크톱 메뉴 (md 이상에서만 보임) -->
+      <nav class="hidden md:flex items-center space-x-1">
+        <a href="/" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">게시판</a>
+        <a href="/dashboard" class="px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">보안 대시보드</a>
+        <a href="/public-posts" class="px-3 py-2 rounded-lg text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition">부산 테마여행</a>
+        <!-- 등급 링크: 일부러 아무한테나 보이게 둔다 — 접근 제어(RBAC) 테스트가 목적이므로,
+             링크는 누구나 누를 수 있고 실제 통과 여부는 각 페이지에서 판정한다. -->
+        <a href="/gold" class="px-3 py-2 rounded-lg text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 transition">골드 전용</a>
+        <a href="/admin" class="px-3 py-2 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition">관리자</a>
+        <span id="auth-nav" class="flex items-center space-x-2 ml-2"></span>
+      </nav>
+
+      <!-- 햄버거 버튼 (md 미만에서만 보임) -->
+      <button id="nav-toggle" type="button"
+              class="md:hidden inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              aria-label="메뉴 열기" aria-expanded="false" aria-controls="mobile-menu">
+        <svg id="icon-open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+        <svg id="icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- 모바일 드롭다운 메뉴 -->
+    <nav id="mobile-menu" class="md:hidden hidden pb-3 space-y-1 border-t border-gray-100 pt-2">
+      <a href="/" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">게시판</a>
+      <a href="/dashboard" class="block px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100">보안 대시보드</a>
+      <a href="/public-posts" class="block px-3 py-2 rounded-lg text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100">부산 테마여행</a>
+      <a href="/gold" class="block px-3 py-2 rounded-lg text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100">골드 전용</a>
+      <a href="/admin" class="block px-3 py-2 rounded-lg text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">관리자</a>
+      <span id="auth-nav-mobile" class="block px-3 py-2 space-x-2"></span>
+    </nav>
+  </div>
+</header>
+
+<script>
+  // 햄버거 토글 — 아이콘 교체 + aria-expanded 갱신(접근성)
+  (function () {
+    const btn = document.getElementById('nav-toggle');
+    const menu = document.getElementById('mobile-menu');
+    const iconOpen = document.getElementById('icon-open');
+    const iconClose = document.getElementById('icon-close');
+    if (!btn || !menu) return;
+
+    btn.addEventListener('click', function () {
+      const willOpen = menu.classList.contains('hidden');
+      menu.classList.toggle('hidden', !willOpen);
+      iconOpen.classList.toggle('hidden', willOpen);
+      iconClose.classList.toggle('hidden', !willOpen);
+      btn.setAttribute('aria-expanded', String(willOpen));
+      btn.setAttribute('aria-label', willOpen ? '메뉴 닫기' : '메뉴 열기');
+    });
+
+    // 데스크톱 폭으로 넓어지면 모바일 메뉴는 닫아 둔다
+    window.addEventListener('resize', function () {
+      if (window.innerWidth >= 768 && !menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+        iconOpen.classList.remove('hidden');
+        iconClose.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  })();
+</script>
+
+<script>
+  // 헤더의 로그인 유저명 + 등급 표시. _nav.html 은 모든 화면에 include 되므로
+  // 여기 한 곳에서만 관리하면 게시판/대시보드/골드/관리자 화면 전부에 자동 반영된다.
+  // (index.html 은 로그인/회원가입 '모달'을 직접 가지고 있어서, 로그인 전 버튼 동작만 다르게 처리한다.)
+  (function () {
+    const ROLE_LABEL = { 0: '일반', 1: '골드', 2: '관리자' };
+    const ROLE_BADGE_CLASS = {
+      0: 'bg-gray-100 text-gray-600',
+      1: 'bg-amber-100 text-amber-700',
+      2: 'bg-red-100 text-red-700',
+    };
+
+    function renderAuthNav() {
+      const token = localStorage.getItem('token');
+      const username = localStorage.getItem('username');
+      const role = parseInt(localStorage.getItem('role') ?? '0', 10);
+      const nav = document.getElementById('auth-nav');
+      const navMobile = document.getElementById('auth-nav-mobile');
+      if (!nav && !navMobile) return;
+
+      let html;
+      if (token && username) {
+        const badge = `<span class="text-xs font-semibold px-2 py-0.5 rounded-full ${ROLE_BADGE_CLASS[role] || ROLE_BADGE_CLASS[0]}">${ROLE_LABEL[role] || '일반'}</span>`;
+        html = `
+          <span class="text-sm font-medium text-gray-700">${username}님 ${badge}</span>
+          <button onclick="navLogout()" class="text-sm text-red-500 hover:underline">로그아웃</button>
+        `;
+      } else if (document.getElementById('auth-modal')) {
+        // 이 화면(index.html)은 자체 로그인/회원가입 모달이 있다 → 모달을 직접 연다.
+        html = `
+          <button onclick="openAuthModal(true)" class="text-sm text-indigo-600 font-medium hover:underline">로그인</button>
+          <button onclick="openAuthModal(false)" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">회원가입</button>
+        `;
+      } else {
+        // 모달이 없는 화면(대시보드/골드/관리자 등) → 게시판 화면으로 안내.
+        html = `<a href="/" class="text-sm text-indigo-600 font-medium hover:underline">로그인 / 회원가입</a>`;
+      }
+      if (nav) nav.innerHTML = html;
+      if (navMobile) navMobile.innerHTML = html;
+    }
+
+    window.renderAuthNav = renderAuthNav;
+    window.navLogout = function () {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      localStorage.removeItem('role');
+      renderAuthNav();
+      // 각 페이지가 로그아웃 후 자기 상태(글쓰기 버튼, 목록 등)를 추가로 정리하고 싶으면
+      // 전역 함수 onAuthChange() 를 정의해두면 여기서 호출해준다.
+      if (typeof window.onAuthChange === 'function') window.onAuthChange();
+      else location.reload();
+    };
+
+    document.addEventListener('DOMContentLoaded', renderAuthNav);
+  })();
+</script>

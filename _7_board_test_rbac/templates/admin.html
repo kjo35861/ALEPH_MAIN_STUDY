@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 — 카페이야기</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+
+  {% include 'partials/_nav.html' %}
+
+  <main class="max-w-3xl mx-auto px-4 py-8 flex-1 w-full">
+
+    <!-- 접속 시도 결과 배너 -->
+    <div id="attempt-banner" class="mb-6 p-3 rounded-lg text-sm font-mono bg-gray-100 text-gray-500">
+      /admin 접근 시도 중…
+    </div>
+
+    <!-- 통과했을 때: 회원 관리 화면 -->
+    <section id="admin-content" class="hidden bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div class="p-6 border-b border-gray-100">
+        <h1 class="text-2xl font-bold text-red-600">🛡️ 관리자 페이지</h1>
+        <p class="text-sm text-gray-500 mt-1">회원 목록을 불러와서 등급을 수정하거나 삭제할 수 있습니다.</p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="text-left px-4 py-2 font-medium">#</th>
+              <th class="text-left px-4 py-2 font-medium">아이디</th>
+              <th class="text-left px-4 py-2 font-medium">등급</th>
+              <th class="text-left px-4 py-2 font-medium">처리</th>
+            </tr>
+          </thead>
+          <tbody id="user-rows" class="divide-y divide-gray-100">
+            <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">불러오는 중…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 실패했을 때 보여줄 예외 화면 -->
+    <section id="exception-screen" class="hidden bg-white rounded-2xl shadow-sm p-8 border-2 border-red-200">
+      <h1 class="text-2xl font-bold text-red-600 mb-2">⛔ 접근 권한이 없습니다</h1>
+      <p id="exception-msg" class="text-gray-600"></p>
+      <a href="/" class="inline-block mt-6 text-sm text-indigo-600 hover:underline">← 게시판으로 돌아가기</a>
+    </section>
+
+  </main>
+
+  <script>
+    const ROLE_LABEL = { 0: '일반', 1: '골드', 2: '관리자' };
+    let myUserId = null; // 토큰에서 뽑아낸 내 id (본인 삭제/강등 버튼 비활성화용)
+
+    function decodeJwtPayload(token) {
+      try {
+        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(decodeURIComponent(escape(atob(base64))));
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function authHeaders() {
+      const token = localStorage.getItem('token');
+      return token ? { 'Authorization': `Bearer ${token}` } : {};
+    }
+
+    async function checkAdminAccess() {
+      const banner = document.getElementById('attempt-banner');
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        banner.textContent = 'GET /api/admin/check → 401 (로그인 필요)';
+        banner.className = 'mb-6 p-3 rounded-lg text-sm font-mono bg-red-50 text-red-600';
+        showException('로그인이 필요합니다. 먼저 게시판에서 로그인해 주세요.');
+        return;
+      }
+
+      myUserId = parseInt(decodeJwtPayload(token).sub, 10);
+
+      const res = await fetch('/api/admin/check', { headers: authHeaders() });
+      const data = await res.json();
+
+      if (res.ok) {
+        banner.textContent = `GET /api/admin/check → ${res.status} 통과 (현재 등급: ${ROLE_LABEL[data.role]})`;
+        banner.className = 'mb-6 p-3 rounded-lg text-sm font-mono bg-emerald-50 text-emerald-700';
+        document.getElementById('admin-content').classList.remove('hidden');
+        loadUsers();
+      } else {
+        banner.textContent = `GET /api/admin/check → ${res.status} 거부`;
+        banner.className = 'mb-6 p-3 rounded-lg text-sm font-mono bg-red-50 text-red-600';
+        showException(
+          `필요 등급: ${data.required_role_name}(${data.required_role}) 이상 / ` +
+          `현재 등급: ${data.current_role_name}(${data.current_role})`
+        );
+      }
+    }
+
+    function showException(msg) {
+      document.getElementById('exception-msg').textContent = msg;
+      document.getElementById('exception-screen').classList.remove('hidden');
+    }
+
+    async function loadUsers() {
+      const res = await fetch('/api/admin/users', { headers: authHeaders() });
+      const data = await res.json();
+      const tbody = document.getElementById('user-rows');
+
+      if (!res.ok) {
+        tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-6 text-center text-red-500">목록을 불러오지 못했습니다.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.users.map(u => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-2 text-gray-400">${u.id}</td>
+          <td class="px-4 py-2 font-medium">${escapeHtml(u.username)}${u.id === myUserId ? ' <span class="text-xs text-gray-400">(나)</span>' : ''}</td>
+          <td class="px-4 py-2">
+            <select data-id="${u.id}" class="role-select border border-gray-300 rounded px-2 py-1 text-sm"
+                    ${u.id === myUserId ? 'disabled title="본인 등급은 여기서 낮출 수 없습니다"' : ''}>
+              <option value="0" ${u.role === 0 ? 'selected' : ''}>일반</option>
+              <option value="1" ${u.role === 1 ? 'selected' : ''}>골드</option>
+              <option value="2" ${u.role === 2 ? 'selected' : ''}>관리자</option>
+            </select>
+          </td>
+          <td class="px-4 py-2 space-x-2">
+            <button onclick="saveRole(${u.id})" class="text-xs text-indigo-600 hover:underline">저장</button>
+            <button onclick="deleteUser(${u.id})" class="text-xs text-red-500 hover:underline"
+                    ${u.id === myUserId ? 'disabled title="본인 계정은 삭제할 수 없습니다"' : ''}>삭제</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function saveRole(id) {
+      const select = document.querySelector(`.role-select[data-id="${id}"]`);
+      const role = parseInt(select.value, 10);
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ role }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('등급이 수정되었습니다.');
+      } else {
+        alert(data.msg || '수정에 실패했습니다.');
+      }
+      loadUsers();
+    }
+
+    async function deleteUser(id) {
+      if (!confirm('정말 이 회원을 삭제하시겠습니까?')) return;
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) alert(data.msg || '삭제에 실패했습니다.');
+      loadUsers();
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>'"]/g,
+        c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c] || c));
+    }
+
+    checkAdminAccess();
+  </script>
+</body>
+</html>
